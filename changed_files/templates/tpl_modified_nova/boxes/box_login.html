@@ -1,0 +1,115 @@
+{config_load file="$language/lang_$language.conf" section="boxes"}
+{config_load file="lang_`$language`.custom"}
+{config_load file="lang_`$language`.section" section="account"}
+
+<div class="toggle_closer"><i class="fa-solid fa-xmark"></i></div>
+{if isset($smarty.session.customer_id)}
+  <div class="toggle_headline">
+    {#title_accountbox_login_success#}    
+  </div>
+
+  <ul class="arrownav">
+    {if isset($IS_CUSTOMER) && $IS_CUSTOMER == true}
+      <li>
+        <a href="{$LINK_ACCOUNT}" title="{#title_nav_account#}">
+          <span class="icon"><i class="fa-solid fa-user"></i></span><span class="title">{#title_nav_account#}</span>
+        </a>
+      </li>
+      <li>
+        <a href="{$LINK_EDIT}" title="{#title_nav_account_edit#}">
+          <span class="icon"><i class="fa-solid fa-user-pen"></i></span><span class="title">{#title_nav_account_edit#}</span>
+        </a>
+      </li>
+      <li>
+        <a href="{$LINK_ADDRESS}" title="{#title_nav_address_book#}">
+          <span class="icon"><i class="fa-solid fa-address-card"></i></span><span class="title">{#title_nav_address_book#}</span>
+        </a>
+      </li>
+      <li>
+        <a href="{$LINK_PASSWORD}" title="{#title_nav_password#}">
+          <span class="icon"><i class="fa-solid fa-key"></i></span><span class="title">{#title_nav_password#}</span>
+        </a>
+      </li>
+      <li>
+        <a href="{$LINK_ORDERS}" title="{#title_nav_orders#}">
+          <span class="icon"><i class="fa-solid fa-cart-shopping"></i></span><span class="title">{#title_nav_orders#}</span>
+        </a>
+      </li>
+      {if isset($LINK_DELETE)}
+        <li>
+          <a href="{$LINK_DELETE}" title="{#title_nav_account_delete#}">
+            <span class="icon"><i class="fa-solid fa-trash-can"></i></span><span class="title">{#title_nav_account_delete#}</span>
+          </a>
+        </li>
+      {/if}    
+      {if isset($LINK_EXPRESS)}
+        <li>
+          <a href="{$LINK_EXPRESS}" title="{#title_nav_checkout_express#}">
+            <span class="icon"><i class="fa-solid fa-truck-fast"></i></span><span class="title">{#title_nav_checkout_express#}</span>
+          </a>
+        </li>
+      {/if}
+    {/if}
+    {if isset($LINK_NEWSLETTER)}
+      <li>
+        <a href="{$LINK_NEWSLETTER}" title="{#title_nav_newsletter#}">
+          <span class="icon"><i class="fa-solid fa-envelopes-bulk"></i></span><span class="title">{#title_nav_newsletter#}</span>
+        </a>
+      </li>
+    {/if}
+    <li>
+      <a href="{$LINK_LOGOFF}" title="{#title_nav_logoff#}">
+        <span class="icon"><i class="fa-solid fa-right-from-bracket"></i></span><span class="title">{#title_nav_logoff#}</span>
+      </a>
+    </li>
+  </ul>
+
+{else}
+
+  {if isset($FORM_ACTION) && $FORM_ACTION != ''}
+    <div class="toggle_headline">
+      {#heading_login#}    
+    </div>
+
+    {$FORM_ACTION}
+      <div class="field_item_1">
+        <label><span class="field_text">{#text_email#}</span>{$FIELD_EMAIL|replace:"type=\"text\"":"type=\"email\""}<span class="inputRequirement">{$smarty.const.TEXT_ICON_ASTERISK}</span></label>
+      </div>
+
+      <div class="field_item_1">
+        <label>
+          <span class="field_text">{#text_pwd#}</span>{$FIELD_PWD}<span class="inputRequirement">{$smarty.const.TEXT_ICON_ASTERISK}</span>
+          <span class="field_eye"><i class="fa-solid fa-eye" data-name="password"></i></span>
+        </label>
+      </div>
+
+      <div class="toggle_action_1">{$BUTTON}</div>
+    {$FORM_END}
+
+    {* BOF Amazon Pay Checkout *}
+    {if 'MODULE_PAYMENT_AMAZON_PAY_STATUS'|defined && $smarty.const.MODULE_PAYMENT_AMAZON_PAY_STATUS === 'True'}
+      <div class="amazon-login-button"></div>
+    {/if}
+    {* EOF Amazon Pay Checkout *}
+
+    <ul class="arrownav">
+      <li>
+        <a href="{$LINK_CREATE_ACCOUNT}" title="{#title_accountbox_create#}">
+          <span class="icon"><i class="fa-solid fa-user-shield"></i></span><span class="title">{#title_accountbox_create#}</span>
+        </a>
+      </li>
+      {if $smarty.const.ACCOUNT_OPTIONS == 'both' or $smarty.const.ACCOUNT_OPTIONS == 'guest'}
+        <li>
+          <a href="{$LINK_CREATE_GUEST_ACCOUNT}" title="{#title_accountbox_create_guest#}">
+            <span class="icon"><i class="fa-solid fa-user"></i></span><span class="title">{#title_accountbox_create_guest#}</span>
+          </a>
+        </li>
+      {/if}
+      <li>
+        <a href="{$LINK_LOST_PASSWORD}" title="{#title_accountbox_password_forgotten#}">
+          <span class="icon"><i class="fa-solid fa-key"></i></span><span class="title">{#title_accountbox_password_forgotten#}</span>
+        </a>
+      </li>
+    </ul>
+  {/if}
+{/if}
