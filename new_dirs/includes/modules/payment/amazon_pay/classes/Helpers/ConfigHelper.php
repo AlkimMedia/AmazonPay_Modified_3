@@ -254,7 +254,7 @@ class ConfigHelper
         while ($r = xtc_db_fetch_array($rs)) {
             $return[$r['iso']] = new stdClass();
         }
-        foreach (['TP', 'ZR', 'CS'] as $notExistingCountry) {
+        foreach (['TP', 'ZR', 'CS', 'AN'] as $notExistingCountry) {
             if (isset($return[$notExistingCountry])) {
                 unset($return[$notExistingCountry]);
             }

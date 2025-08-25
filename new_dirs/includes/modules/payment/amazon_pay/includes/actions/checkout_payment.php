@@ -22,6 +22,9 @@ if (!empty($_SESSION['sendto'])) {
 
 if (isset($_GET['_action']) && $_GET['_action'] === 'reset_payment') {
     unset($_SESSION['payment']);
+    if(isset($_SESSION['amazon_checkout_session'])) {
+        unset($_SESSION['amazon_checkout_session']);
+    }
 } elseif (!empty($_SESSION['payment']) && $_SESSION['payment'] === $configHelper->getPaymentMethodName() && empty($_GET['error_message']) && isset($_SESSION['sendto'])) {
     require_once (DIR_WS_CLASSES . 'order.php');
     $order = new order();

@@ -4,10 +4,13 @@ require_once DIR_FS_CATALOG . 'includes/modules/payment/amazon_pay/amazon_pay.ph
 use AlkimAmazonPay\AmazonPayHelper;
 use AlkimAmazonPay\CheckoutHelper;
 use AlkimAmazonPay\ConfigHelper;
+use AlkimAmazonPay\Exceptions\AddressValidationHardException;
+use AlkimAmazonPay\Exceptions\AddressValidationSoftException;
 use AlkimAmazonPay\GeneralHelper;
 use AlkimAmazonPay\Helpers\TransactionHelper;
 use AlkimAmazonPay\InstallHelper;
 use AlkimAmazonPay\OrderHelper;
+use AmazonPayApiSdkExtension\Struct\CheckoutSession;
 use AmazonPayApiSdkExtension\Struct\PaymentDetails;
 use AmazonPayApiSdkExtension\Struct\Price;
 use AmazonPayApiSdkExtension\Struct\StatusDetails;
@@ -108,15 +111,48 @@ class amazon_pay
         $amazonPayHelper = new AmazonPayHelper();
         $checkoutHelper = new CheckoutHelper();
         $transactionHelper = new TransactionHelper();
-
         $paymentDetails = new PaymentDetails();
+        $orderHelper = new OrderHelper();
+
+        $order = new order($insert_id);
+
+        $hasSoftError = false;
+
+        $errorHandler  = function(CheckoutSession $checkoutSession, $orderId) use ($orderHelper){
+            $address = $checkoutSession->getShippingAddress();
+            $orderHelper->addOrderComment((int)$orderId, "Amazon Pay - address validation failed - fraud suspected.\n\nAmazon Pay Shipping Address:\n".
+                $address->getName()."\n".
+                $address->getAddressLine1()."\n".
+                $address->getAddressLine2()."\n".
+                $address->getAddressLine3()."\n".
+                $address->getPostalCode().' '.$address->getCity()."\n".
+                $address->getCountryCode()."\n"
+            );
+        };
+
+
+        try{
+            $checkoutSession = $amazonPayHelper->getClient()->getCheckoutSession($_SESSION['amazon_checkout_session']);
+            $checkoutHelper->validateAddresses($checkoutSession, $order);
+        }catch (AddressValidationHardException $e){
+            GeneralHelper::log('error', 'address validation hard exception', ['msg' => $e->getMessage(), 'checkoutSession' => $checkoutSession->toArray(), 'order_delivery' => $order->delivery]);
+            $orderHelper->setOrderStatusDeclined($insert_id);
+            $errorHandler($checkoutSession, $insert_id);
+            unset($_SESSION['amazon_checkout_session']);
+            return;
+        }catch (AddressValidationSoftException $e){
+            GeneralHelper::log('error', 'address validation soft exception', ['msg' => $e->getMessage(), 'checkoutSession' => $checkoutSession->toArray(), 'order_delivery' => $order->delivery]);
+            $errorHandler($checkoutSession, $insert_id);
+            $hasSoftError = true;
+        }
+
         try {
             $orderTotal = $this->getOrderTotal($insert_id);
 
             if ($orderTotal <= 0) {
                 throw new Exception('order value must be greater than 0 (order #' . $insert_id . ')');
             }
-            $order = new order($insert_id);
+
 
             $paymentDetails->setChargeAmount(new Price(['amount' => round($orderTotal, 2), 'currencyCode' => $order->info['currency']]));
 
@@ -143,7 +179,6 @@ class amazon_pay
                 $charge = $amazonPayHelper->getClient()->getCharge($checkoutSession->getChargeId());
                 $transaction = $transactionHelper->saveNewCharge($charge, $insert_id);
                 if ($transaction->status === StatusDetails::AUTHORIZED) {
-                    $orderHelper = new OrderHelper();
                     $orderHelper->setOrderStatusAuthorized($insert_id);
                     if (ConfigHelper::getConstant('APC_CAPTURE_MODE') === 'after_auth') {
                         $transactionHelper->capture($charge->getChargeId());
@@ -161,8 +196,12 @@ class amazon_pay
                                 comments = CONCAT('" . xtc_db_input(TEXT_AMAZON_PAY_ORDER_REFERENCE . ": " . $checkoutSession->getChargePermissionId() . "\n\n") . "', comments) 
                               WHERE 
                                 orders_status_history_id = (SELECT 	orders_status_history_id FROM orders_status_history WHERE orders_id = " . (int)$insert_id . " ORDER BY orders_status_history_id LIMIT 1)");
-
             }
+
+            if($hasSoftError){
+                $orderHelper->setOrderStatus($insert_id, 0, 'Amazon Pay - please validate payment manually', true);
+            }
+
         } catch (Exception $e) {
             $checkoutSession = $amazonPayHelper->getClient()->getCheckoutSession($_SESSION['amazon_checkout_session']);
             GeneralHelper::log('error', 'unexpected exception during checkout', [$e->getMessage(), $checkoutSession->toArray()]);

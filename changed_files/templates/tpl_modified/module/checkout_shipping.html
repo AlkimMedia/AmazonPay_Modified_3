@@ -37,7 +37,7 @@
     <h4>{#title_address#}</h4>
     <p class="cf"><span class="checkout_button_right">
         {* BOF Amazon Pay Checkout *}
-        {if $smarty.session.payment === 'amazon_pay'}
+        {if $smarty.session.payment === 'amazon_pay' && $smarty.session.amazon_checkout_session}
             {$BUTTON_ADDRESS|regex_replace:'/href="/':'href="javascript:console.log();" id="amz-change-address" data-href="'}
         {else}
             {$BUTTON_ADDRESS}

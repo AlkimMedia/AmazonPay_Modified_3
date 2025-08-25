@@ -10,6 +10,10 @@ if(!empty($_SESSION['language']) && file_exists(__DIR__.'/lang/'.$_SESSION['lang
 }
 
 //TODO replace
+
+foreach(glob(__DIR__.'/classes/Exceptions/*.php') as $_file){
+    require_once $_file;
+}
 foreach(glob(__DIR__.'/classes/Helpers/*.php') as $_file){
     require_once $_file;
 }

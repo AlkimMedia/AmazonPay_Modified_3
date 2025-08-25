@@ -41,25 +41,27 @@ class OrderHelper
         self::setOrderStatus($orderId, ConfigHelper::getConstant('APC_ORDER_STATUS_AUTHORIZED', 0), 'Amazon Pay - authorize');
     }
 
-    public function setOrderStatus($orderId, $status, $comment = ''): void
+    public function setOrderStatus($orderId, $status, $comment = '', $forceStatusId = false): void
     {
         $orderId = (int)$orderId;
         $status = (int)$status;
-        if ($status <= 0) {
-            $q = "SELECT orders_status FROM " . TABLE_ORDERS . " WHERE orders_id = " . $orderId;
-            $rs = xtc_db_query($q);
-            if ($r = xtc_db_fetch_array($rs)) {
-                $status = (int)$r["orders_status"];
-            } else {
-                return;
+        if(!$forceStatusId) {
+            if ($status <= 0) {
+                $q = "SELECT orders_status FROM " . TABLE_ORDERS . " WHERE orders_id = " . $orderId;
+                $rs = xtc_db_query($q);
+                if ($r = xtc_db_fetch_array($rs)) {
+                    $status = (int)$r["orders_status"];
+                } else {
+                    return;
+                }
+            }else {
+                $q = "SELECT * FROM " . TABLE_ORDERS_STATUS_HISTORY . " WHERE orders_id = " . $orderId . " AND orders_status_id = " . $status;
+                $rs = xtc_db_query($q);
+                if (xtc_db_num_rows($rs)) {
+                    //already set
+                    return;
+                }
             }
-        }
-
-        $q = "SELECT * FROM " . TABLE_ORDERS_STATUS_HISTORY . " WHERE orders_id = " . $orderId . " AND orders_status_id = " . $status;
-        $rs = xtc_db_query($q);
-        if (xtc_db_num_rows($rs)) {
-            //already set
-            return;
         }
 
         $data = [
@@ -82,5 +84,10 @@ class OrderHelper
     public function setOrderStatusCaptured($orderId): void
     {
         self::setOrderStatus($orderId, ConfigHelper::getConstant('APC_ORDER_STATUS_CAPTURED', 0), 'Amazon Pay - captured');
+    }
+
+    public function addOrderComment(int $orderId, string $comment): void
+    {
+        $this->setOrderStatus($orderId, -10, $comment);
     }
 }

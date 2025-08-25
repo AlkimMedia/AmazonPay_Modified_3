@@ -25,6 +25,13 @@
     </p>
   </div>
 {/if}
+{if $amazonPayError}
+  <div class="amazon-pay-alert alert alert-danger" style="padding:10px; margin:10px 0; background:#fdd8d3; border:1px solid #dc1b1b;">
+    <p>
+      {$amazonPayError}
+    </p>
+  </div>
+{/if}
 {* EOF Amazon Pay Checkout *}
 
 <div class="twoColums">

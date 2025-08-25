@@ -11,6 +11,10 @@ require_once DIR_WS_CLASSES . 'order_total.php';
 $order_total_modules = new order_total();
 $order_totals = $order_total_modules->process();
 
+//this is needed for gzip support
+$smarty = new Smarty();
+include 'includes/header.php';
+
 echo '<div id="amazon-pay-button-hidden" style="display: none;"></div>';
 
 include 'includes/application_bottom.php';

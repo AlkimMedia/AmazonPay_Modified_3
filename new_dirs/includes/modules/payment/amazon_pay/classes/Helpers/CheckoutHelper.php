@@ -10,6 +10,8 @@ use AmazonPayApiSdkExtension\Struct\MerchantMetadata;
 use AmazonPayApiSdkExtension\Struct\PaymentDetails;
 use AmazonPayApiSdkExtension\Struct\Price;
 use AmazonPayApiSdkExtension\Struct\WebCheckoutDetails;
+use AlkimAmazonPay\Exceptions\AddressValidationHardException;
+use AlkimAmazonPay\Exceptions\AddressValidationSoftException;
 use order;
 use order_total;
 use shipping;
@@ -27,10 +29,11 @@ class CheckoutHelper
         $this->configHelper = new ConfigHelper();
     }
 
-    public function getNewCheckoutSessionObject():CheckoutSession{
+    public function getNewCheckoutSessionObject(): CheckoutSession
+    {
         $storeName = ConfigHelper::getConstant('STORE_NAME', '');
         $encoding = mb_detect_encoding($storeName, ['UTF-8', 'ISO-8859-1', 'ISO-8859-2', 'ISO-8859-15']);
-        if($encoding !== 'UTF-8'){
+        if ($encoding !== 'UTF-8') {
             $storeName = mb_convert_encoding($storeName, 'UTF-8', $encoding);
         }
         $storeName = (mb_strlen($storeName) <= 50) ? $storeName : (mb_substr($storeName, 0, 47) . '...');
@@ -57,8 +60,11 @@ class CheckoutHelper
         return $checkoutSession;
     }
 
-    public function getApbCheckoutSessionObject(){
+    public function getApbCheckoutSessionObject()
+    {
         global $order;
+        global $order_totals;
+
         $checkoutSession = $this->getNewCheckoutSessionObject();
         $checkoutSession->getWebCheckoutDetails()
             ->setCheckoutMode(WebCheckoutDetails::CHECKOUT_MODE_PROCESS_ORDER)
@@ -69,27 +75,44 @@ class CheckoutHelper
         $paymentDetails
             ->setPaymentIntent('Authorize')
             ->setCanHandlePendingAuthorization($this->configHelper->canHandlePendingAuth())
-            ->setChargeAmount(new Price(['amount' => $order->info['total'], 'currencyCode' => $order->info['currency']]));
+            ->setChargeAmount(new Price(['amount' => $this->getTotalAmount($order, $order_totals), 'currencyCode' => $order->info['currency']]));
         $checkoutSession->setPaymentDetails($paymentDetails);
 
 
         $address = new AddressDetails();
         $address->setName($order->delivery['firstname'] . ' ' . $order->delivery['lastname'])
-            ->setAddressLine1((string)(!empty($order->delivery['company'])?$order->delivery['company']:$order->delivery['street_address']))
-            ->setAddressLine2((string)(!empty($order->delivery['company'])?$order->delivery['street']:$order->delivery['suburb']))
-            ->setAddressLine3((string)(!empty($order->delivery['company'])?$order->delivery['suburb']:''))
+            ->setAddressLine1((string)(!empty($order->delivery['company']) ? $order->delivery['company'] : $order->delivery['street_address']))
+            ->setAddressLine2((string)(!empty($order->delivery['company']) ? $order->delivery['street'] : $order->delivery['suburb']))
+            ->setAddressLine3((string)(!empty($order->delivery['company']) ? $order->delivery['suburb'] : ''))
             ->setCity($order->delivery['city'])
             ->setPostalCode($order->delivery['postcode'])
             ->setCountryCode($order->delivery['country']['iso_code_2'])
-            ->setPhoneNumber($order->customer['telephone']?:'00000');
+            ->setPhoneNumber($order->customer['telephone'] ?: '00000');
         $checkoutSession->setAddressDetails($address);
 
         return $checkoutSession;
     }
 
+    protected function getTotalAmount($order, $order_total_modules): float
+    {
+
+        $totalFromOrderTotalModules = 0;
+        if (!empty($order_total_modules) && is_array($order_total_modules)) {
+            foreach ($order_total_modules as $module) {
+                if ($module['code'] === 'ot_total') {
+                    $totalFromOrderTotalModules = round($module['value'], 2);
+                }
+            }
+            if ($totalFromOrderTotalModules > 0) {
+                return $totalFromOrderTotalModules;
+            }
+        }
+
+        return round($order->info['total'], 2);
+    }
 
 
-    public function createCheckoutSession():?CheckoutSession
+    public function createCheckoutSession(): ?CheckoutSession
     {
         try {
             return $this->amazonPayHelper->getClient()->createCheckoutSession($this->getNewCheckoutSessionObject());
@@ -99,7 +122,7 @@ class CheckoutHelper
         return null;
     }
 
-    public function getCheckoutSession($checkoutSessionId):?CheckoutSession
+    public function getCheckoutSession($checkoutSessionId): ?CheckoutSession
     {
         try {
             return $this->amazonPayHelper->getClient()->getCheckoutSession($checkoutSessionId);
@@ -119,7 +142,7 @@ class CheckoutHelper
         return null;
     }
 
-    public function setOrderIdToChargePermission($chargePermissionId, $orderId):void
+    public function setOrderIdToChargePermission($chargePermissionId, $orderId): void
     {
 
         $this->amazonPayHelper->getClient()->updateChargePermission(
@@ -128,7 +151,7 @@ class CheckoutHelper
         );
     }
 
-    protected function getCachedSignature($payload):string
+    protected function getCachedSignature($payload): string
     {
         $storageKey = 'apcv2_button_signature_' . md5(serialize([$this->configHelper->getMainConfig(), $payload]));
         $cacheFile = DIR_FS_CATALOG . 'cache/' . $storageKey;
@@ -142,7 +165,7 @@ class CheckoutHelper
         return $signature;
     }
 
-    public function getJs($placement = 'Cart'):string
+    public function getJs($placement = 'Cart'): string
     {
         if (!$this->configHelper->isActive()) {
             return '';
@@ -202,23 +225,23 @@ class CheckoutHelper
 
         $amazonPayParametersJson = json_encode($amazonPayParameters);
 
-        $return = '<script src="https://static-eu.payments-amazon.com/checkout.js"></script>'.
-            '<script>const amazonPayParameters = ' . $amazonPayParametersJson . ';</script>'.
+        $return = '<script src="https://static-eu.payments-amazon.com/checkout.js"></script>' .
+            '<script>const amazonPayParameters = ' . $amazonPayParametersJson . ';</script>' .
             '<script src="' . DIR_WS_CATALOG . 'includes/modules/payment/amazon_pay/js/amazon-pay.js"></script>';
 
 
-        if(str_contains($PHP_SELF, 'amazon_pay_checkout.php')){
+        if (str_contains($PHP_SELF, 'amazon_pay_checkout.php')) {
             //APB
             $checkoutSession = $this->getApbCheckoutSessionObject();
+            $checkoutSession->getWebCheckoutDetails()->setCheckoutCancelUrl(xtc_href_link(FILENAME_CHECKOUT_PAYMENT, '_action=reset_payment', 'SSL'));
             $createCheckoutSessionPayload = stripcslashes(json_encode($checkoutSession->toArray(), JSON_UNESCAPED_UNICODE));
             $createCheckoutSessionSignature = $this->amazonPayHelper->getClient()->generateButtonSignature($createCheckoutSessionPayload);
-//var_dump($checkoutSession->toArray());die;
             $createCheckoutSessionConfig = [
                 'payloadJSON' => $createCheckoutSessionPayload,
                 'signature' => $createCheckoutSessionSignature,
                 'publicKeyId' => $this->configHelper->getPublicKeyId(),
             ];
-            $return .= '<script>alkimAmazonPay.doApbCheckout('.json_encode($createCheckoutSessionConfig).');</script>';
+            $return .= '<script>alkimAmazonPay.doApbCheckout(' . json_encode($createCheckoutSessionConfig) . ');</script>';
         }
 
 
@@ -281,4 +304,60 @@ class CheckoutHelper
         unset($_SESSION['payment']);
         xtc_redirect(xtc_href_link(FILENAME_CHECKOUT_PAYMENT, 'payment_error=' . $this->configHelper->getPaymentMethodName()));
     }
+
+    public function validateAddresses(CheckoutSession $checkoutSession, $order): void
+    {
+        $amzAddress = $checkoutSession->getShippingAddress();
+
+        $orderDeliveryAddress = $order->delivery;
+
+        if (!$this->areAddressStringsEqual($amzAddress->getPostalCode(), $orderDeliveryAddress['postcode'])) {
+            throw new AddressValidationHardException('Postcode mismatch');
+        }
+
+        if (!$this->areAddressStringsEqual($amzAddress->getCity(), $orderDeliveryAddress['city'])) {
+            throw new AddressValidationHardException('City mismatch');
+        }
+
+        if (!$this->areAddressStringsEqual($amzAddress->getCountryCode(), $orderDeliveryAddress['country_iso_2'])) {
+            throw new AddressValidationHardException('Country mismatch');
+        }
+
+        if (!$this->doesAddressStringContain($amzAddress->getName(), $orderDeliveryAddress['firstname']) && !$this->doesAddressStringContain($amzAddress->getName(), $orderDeliveryAddress['lastname'])) {
+            throw new AddressValidationHardException('Name mismatch');
+        }
+
+        $addressString = $orderDeliveryAddress['company'] . ' ' .
+            $orderDeliveryAddress['street_address'] . ' ' .
+            $orderDeliveryAddress['house_number'] . ' ' .
+            $orderDeliveryAddress['additional_address_info'] . ' ' .
+            $orderDeliveryAddress['suburb'];
+
+        if (!empty($amzAddress->getAddressLine1()) && !$this->doesAddressStringContain($addressString, $amzAddress->getAddressLine1())) {
+            throw new AddressValidationSoftException('addressLine1 mismatch');
+        }
+
+        if (!empty($amzAddress->getAddressLine2()) && !$this->doesAddressStringContain($addressString, $amzAddress->getAddressLine2())) {
+            throw new AddressValidationSoftException('addressLine2 mismatch');
+        }
+
+        if (!empty($amzAddress->getAddressLine3()) && !$this->doesAddressStringContain($addressString, $amzAddress->getAddressLine3())) {
+            throw new AddressValidationSoftException('addressLine3 mismatch');
+        }
+    }
+
+    protected function doesAddressStringContain($haystack, $needle): bool
+    {
+        $haystack = strtolower($haystack);
+        $needle = trim(strtolower($needle));
+        return false !== strpos($haystack, $needle);
+    }
+
+    protected function areAddressStringsEqual($string1, $string2): bool
+    {
+        $string1 = trim(strtolower($string1));
+        $string2 = trim(strtolower($string2));
+        return $string1 === $string2;
+    }
+
 }

@@ -56,7 +56,7 @@
 {if $DELIVERY_LABEL}
 <div class="twoColums">
   <div class="highlightbox plainleft">
-    <h4>{if isset($SHIPPING_CLASS) && strpos($SHIPPING_CLASS, 'selfpickup') !== false}{#text_pickup_address#}{else}{#text_shipping_address#} <a class="midi" href="{if $smarty.session.payment === 'amazon_pay'}javascript:function(){ldelim}{rdelim}{else}{$SHIPPING_ADDRESS_EDIT}{/if}" {if $smarty.session.payment === 'amazon_pay'}id="amz-change-address"{/if}>{#text_edit#}</a>{/if}</h4>
+    <h4>{if isset($SHIPPING_CLASS) && strpos($SHIPPING_CLASS, 'selfpickup') !== false}{#text_pickup_address#}{else}{#text_shipping_address#} <a class="midi" href="{if $smarty.session.payment === 'amazon_pay' && $smarty.session.amazon_checkout_session}javascript:function(){ldelim}{rdelim}{else}{$SHIPPING_ADDRESS_EDIT}{/if}" {if $smarty.session.payment === 'amazon_pay' && $smarty.session.amazon_checkout_session}id="amz-change-address"{/if}>{#text_edit#}</a>{/if}</h4>
     {$DELIVERY_LABEL} 
   </div>
 </div>
@@ -64,7 +64,7 @@
 {if $BILLING_LABEL}
 <div class="twoColums last">
   <div class="highlightbox plainright">
-    <h4 class="checkout">{#text_payment_address#}{if $smarty.session.payment !== 'amazon_pay'} <a class="midi" href="{$BILLING_ADDRESS_EDIT}">{#text_edit#}</a>{/if}</h4>
+    <h4 class="checkout">{#text_payment_address#} <a class="midi" href="{$BILLING_ADDRESS_EDIT}">{#text_edit#}</a></h4>
     {$BILLING_LABEL}
   </div>
 </div>

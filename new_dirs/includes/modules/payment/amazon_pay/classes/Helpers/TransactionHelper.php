@@ -90,6 +90,19 @@ class TransactionHelper
         return null;
     }
 
+    public function getTransactionsByOrderId($orderId): array
+    {
+        $q  = "SELECT * FROM amazon_pay_transactions WHERE order_id = '" . xtc_db_input($orderId) . "'";
+        $rs = xtc_db_query($q);
+        $result = [];
+        while ($r = xtc_db_fetch_array($rs)) {
+            $result[] = new Transaction($r);
+        }
+
+        return $result;
+    }
+
+
     public function capture($chargeId, $amount = null): void
     {
         try {

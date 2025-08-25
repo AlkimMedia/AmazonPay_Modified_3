@@ -5,8 +5,8 @@ $checkoutHelper = new \AlkimAmazonPay\CheckoutHelper();
 $configHelper   = new \AlkimAmazonPay\ConfigHelper();
 
 if (empty($_SESSION['amazon_checkout_session'])) {
-    \AlkimAmazonPay\GeneralHelper::log('warning', 'lost amazon checkout session id', $_SESSION);
-    xtc_redirect(xtc_href_link(FILENAME_SHOPPING_CART));
+    // this will default to APB flow
+    return;
 }
 
 $checkoutSession = $checkoutHelper->getCheckoutSession($_SESSION['amazon_checkout_session']);

@@ -2,6 +2,7 @@ const alkimAmazonPay = {
     payButtonCount: 0,
     init() {
         alkimAmazonPay.registerAmazonPayButtons();
+        alkimAmazonPay.registerAmazonLoginButtons();
         alkimAmazonPay.bindChangeActions();
     },
     registerAmazonPayButtons() {
@@ -71,7 +72,7 @@ const alkimAmazonPay = {
                     sandbox: amazonPayParameters.isSandbox,
                     ledgerCurrency: amazonPayParameters.ledgerCurrency,
                     checkoutLanguage: amazonPayParameters.language,
-                    productType: amazonPayParameters.productType,
+                    productType: 'SignIn',
                     placement: amazonPayParameters.placement,
                     buttonColor: amazonPayParameters.loginButtonColor,
                     signInConfig: {
@@ -114,9 +115,10 @@ const alkimAmazonPay = {
 
 
     bindChangeActions() {
+
         try {
             amazon.Pay.bindChangeAction('#amz-change-address', {
-                amazonCheckoutSessionId: '$checkoutSessionId',
+                amazonCheckoutSessionId: amazonPayParameters.checkoutSessionId,
                 changeAction: 'changeAddress'
             });
         } catch (e) {
@@ -124,7 +126,7 @@ const alkimAmazonPay = {
         }
         try {
             amazon.Pay.bindChangeAction('#amz-change-payment', {
-                amazonCheckoutSessionId: '$checkoutSessionId',
+                amazonCheckoutSessionId: amazonPayParameters.checkoutSessionId,
                 changeAction: 'changePayment'
             });
         } catch (e) {
