@@ -139,7 +139,7 @@ const alkimAmazonPay = {
         const fields = form.querySelectorAll('input, select, textarea');
         for (let i = 0; i < fields.length; i++) {
             const field = fields[i];
-            if (field.name && field.value) {
+            if (field.name && field.value && field.type !== 'submit') {
                 params.push(encodeURIComponent(field.name) + '=' + encodeURIComponent(field.value));
             }
         }
