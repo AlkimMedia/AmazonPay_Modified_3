@@ -1,5 +1,5 @@
 <?php
-if(defined('MODULE_PAYMENT_AMAZON_PAY_STATUS') && MODULE_PAYMENT_AMAZON_PAY_STATUS == 'True') {
+if(defined('MODULE_PAYMENT_AMAZON_PAY_STATUS') && MODULE_PAYMENT_AMAZON_PAY_STATUS == 'True' && class_exists('\AlkimAmazonPay\CheckoutHelper')) {
     $checkoutHelper = new \AlkimAmazonPay\CheckoutHelper();
     echo $checkoutHelper->getJs();
     ?>
