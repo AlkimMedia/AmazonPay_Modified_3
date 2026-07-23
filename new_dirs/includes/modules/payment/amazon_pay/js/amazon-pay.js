@@ -152,24 +152,24 @@ const alkimAmazonPay = {
 
 document.addEventListener('DOMContentLoaded', function () {
     alkimAmazonPay.init();
+
+    const commentsInput = document.getElementById('checkout-confirmation-comments-input');
+    if (commentsInput) {
+        commentsInput.addEventListener('keyup', function () {
+            document.getElementById('checkout-confirmation-comments').value = commentsInput.value;
+        });
+    }
+
+    const amazonPayUseCreditCheckbox = document.querySelector('[name="amazon_pay_use_credit"]');
+    if (amazonPayUseCreditCheckbox) {
+        amazonPayUseCreditCheckbox.addEventListener('change', function () {
+            const xhr = new XMLHttpRequest();
+            xhr.open("POST", amazonPayParameters.useCreditUrl);
+            xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+            xhr.send('use_credit=' + (amazonPayUseCreditCheckbox.checked ? 1 : 0));
+            xhr.onload = function () {
+                window.location.reload();
+            }
+        });
+    }
 });
-
-const commentsInput = document.getElementById('checkout-confirmation-comments-input');
-if (commentsInput) {
-    commentsInput.addEventListener('keyup', function () {
-        document.getElementById('checkout-confirmation-comments').value = commentsInput.value;
-    });
-}
-
-const amazonPayUseCreditCheckbox = document.querySelector('[name="amazon_pay_use_credit"]');
-if (amazonPayUseCreditCheckbox) {
-    amazonPayUseCreditCheckbox.addEventListener('change', function () {
-        const xhr = new XMLHttpRequest();
-        xhr.open("POST", useCreditUrl);
-        xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-        xhr.send('use_credit=' + (amazonPayUseCreditCheckbox.checked ? 1 : 0));
-        xhr.onload = function () {
-            window.location.reload();
-        }
-    });
-}
