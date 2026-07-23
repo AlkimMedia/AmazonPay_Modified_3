@@ -1,6 +1,9 @@
 <?php
 
 function smarty_function_amazonPayUseCredit(){
+    if(empty($_SESSION['amazon_checkout_session'])){
+        return '';
+    }
     global $order_total_modules;
     $return = '';
     $oldValue = isset($_SESSION['cot_gv'])?$_SESSION['cot_gv']:null;
